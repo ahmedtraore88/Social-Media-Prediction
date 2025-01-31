@@ -1,0 +1,629 @@
+---
+title: "Report Project MRR"
+author: "Ahmed TRAORE"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# INTRODUCTION
+
+Dans ce projet, nous cherchons à prédire les métriques de performance des publications sur les réseaux sociaux, en particulier sur Facebook. L'objectif est de comprendre comment les caractéristiques des publications influencent des résultats tels que la portée, l'engagement et leur impact sur la reconnaissance de la marque.
+
+Nous disposons d’un jeu de données tirés de Facebook d'une célèbre marque de cosmétiques, composé de 500 observations et 19 variables dont 12 de performances et 7 utilisées comme entrées pour prédire les autres. Les variables incluent le type de publication, l'heure de publication, et le nombre de mentions "J'aime" sur la page, afin de modéliser ces métriques de performance.
+
+# Prétraitement et nettoyage des Données
+
+Notre dataset presente des données manquantes donc pour garantir une exploitation optimale des données et éviter que ces valeurs manquantes n'influencent négativement les résultats, nous avons omis toutes les lignes concernée. Elles sont, de plus, relativement riches (puisque
+nous avons n>>p).
+
+Avant tout cela, nous allons charger notre dataset et ensuite effectuer un prétraitement pour éliminer les valeurs manquantes, normaliser les variables, et préparer les données pour l'analyse et la modélisation.
+
+```{r}
+# Chargement du dataset 
+dataset <- read.csv(file = "dataset.csv", header = TRUE, sep = ";")
+
+# Création d'une copie du dataset pour effectuer des modifications sans altérer l'original
+modif_dataset <- dataset
+
+# Conversion de la colonne "Type" en variables numériques 
+modif_dataset[, "Type"] <- as.numeric(factor(modif_dataset[, "Type"]))
+
+# Suppression des lignes contenant des valeurs manquantes dans le dataset
+modif_dataset <- na.omit(modif_dataset)
+
+# Vérifie s'il reste des valeurs manquantes dans le dataset modifié après le traitement.
+sum(is.na(modif_dataset))
+
+# Affiche le nombre de lignes restantes après suppression des lignes avec des valeurs manquantes.
+nrow(modif_dataset)
+
+# Affichage des 5 premières lignes 
+head(modif_dataset)
+
+```
+
+# Analyse exploratoire des données
+
+## Statistiques descriptives
+
+Les statistiques descriptives permettent de résumer et de mieux comprendre les caractéristiques principales de notre jeu de données. Dans cette étape, nous calculons des mesures de tendance centrale comme la moyenne et la médiane, ainsi que des mesures de dispersion telles que les valeurs minimales, maximales et les quartiles. Ces statistiques nous aident à avoir une vue d'ensemble sur la répartition des variables et à identifier d'éventuelles anomalies ou valeurs extrêmes. L'utilisation de ces statistiques est essentielle avant de passer à des analyses plus complexes, car elles nous permettent d'évaluer la qualité des données et de prendre des décisions sur leur traitement éventuel.
+
+```{r}
+# Permet d'avoir un aperçu global des statistiques descriptives (min, max, médiane, moyenne)
+summary(modif_dataset)
+```
+Voici quelques points clés à noter :
+
+*Page.total.likes* : Les pages ont entre 81 370 et 139 441 likes, avec une moyenne d'environ 123 173, indiquant une forte présence sur la plateforme.
+
+*Type* : Cette variable est catégorique avec des valeurs allant de 1 à 4, représentant différents types de publications. La majorité des publications semble être de type 2 (statut ou photo).
+
+*Category* : Cette variable catégorique présente des valeurs comprises entre 1 et 3, ce qui correspond à différentes catégories de publication, avec une moyenne proche de 2, suggérant une distribution plutôt homogène entre les catégories.
+
+*Post.Month et Post.Weekday* : Les publications sont distribuées tout au long de l'année et de la semaine, avec une légère tendance à la publication en semaine et pendant certains mois.
+
+*Lifetime.Post.Total.Reach et Lifetime.Post.Total.Impressions* : La portée et les impressions des publications varient considérablement, avec des valeurs maximales atteignant 180 480 pour la portée et 1 110 282 pour les impressions. Cela indique une large variation dans la visibilité des publications.
+
+*Lifetime.Engaged.Users et Lifetime.Post.Consumers* : Les utilisateurs engagés et les consommateurs des publications suivent une distribution similaire, avec des valeurs médianes autour de 630 et 555 respectivement, et des valeurs maximales beaucoup plus élevées, signalant des pics d'engagement.
+
+*Lifetime.Post.Consumptions et Lifetime.Post.Impressions.by.people.who.have.liked.your.Page* : Ces deux variables montrent des valeurs élevées, suggérant que les utilisateurs qui ont aimé la page sont très engagés et consomment fréquemment le contenu.
+
+*Lifetime.Post.reach.by.people.who.like.your.Page et Lifetime.People.who.have.liked.your.Page.and.engaged.with.your.post* : Ces deux indicateurs montrent une relation forte entre les personnes qui ont aimé la page et celles qui interagissent avec les publications.
+
+*Interactions (comment, like, share, Total.Interactions)* : Les données montrent que les publications reçoivent un large éventail de likes, de commentaires et de partages, avec des valeurs maximales atteignant respectivement 5172, 372 et 790. La somme des interactions (likes, shares, comments) est élevée, ce qui indique un fort engagement général.
+
+En résumé, ces statistiques descriptives révèlent une grande variation dans les performances des publications et permettent de cibler les variables les plus pertinentes pour une analyse approfondie.
+
+## Analyse des corrélations
+
+Nous allons maintenant visualiser la matrice de corrélation pour observer les relations entre les variables.
+
+```{r}
+library(corrplot)
+
+matrix <- cor(modif_dataset)
+
+# renommage de certaines colonnes
+colnames(matrix) <- c("Page total likes","Type","Category","Post Month","Post Weekday","Post Hour","Paid","LT. P. Total Reach","LT. P. Total Impressions","LT. Engaged Users","LT. P. Consumers","LT. P. Consumptions","LT. Page Likers Impressions","Page Likers LT. Reach","LT. Page Likers and Engagers","comment","like","share","Total Interactions")
+
+rownames(matrix) <- c("Page total likes","Type","Category","Post Month","Post Weekday","Post Hour","Paid","LT. P. Total Reach","LT. P. Total Impressions","LT. Engaged Users","LT. P. Consumers","LT. P. Consumptions","LT. Page Likers Impressions","Page Likers LT. Reach","LT. Page Likers and Engagers","comment","like","share","Total Interactions")
+
+corrplot(matrix, method = "pie", tl.cex = 0.46)
+```
+
+
+*Observation :*
+
+La matrice de corrélation des différentes variables du dataset, présentée ci-dessus, permet d'analyser les relations entre celles-ci. Voici les principales observations tirées de cette analyse :
+
+ - Les variables liées aux interactions (comment, like, share, Total Interactions) présentent de fortes corrélations positives entre elles, indiquant qu'elles évoluent souvent ensemble.
+ - Les mesures de portée et d'engagement (Lifetime Post Total Reach, Engaged Users, Impressions, Consumers, etc.) sont également fortement corrélées, ce qui suggère des relations étroites entre ces métriques.
+ - Les variables comme Post Month, Post Weekday et Post Hour semblent avoir des corrélations faibles avec les autres, ce qui peut indiquer un impact limité sur les interactions globales.
+ - La variable Paid montre une corrélation modérée avec certaines métriques d'engagement, ce qui reflète un impact significatif mais non dominant des publications sponsorisées.
+
+
+Ces observations guideront la sélection des variables les plus pertinentes pour l'analyse ou la modélisation.
+
+
+## Calcul des métrique pour le choix du Target
+
+Ici, nous allons nous baser sur le calcul du RMSE et du MAE pour chaque variable cible potentiel en se basant sur les 7 inputs. Ci-joint une fonction qui nous permettra de faire cela.
+
+```{r}
+library(caret)
+
+# Fonction pour calculer le RMSE pour toutes les variables cibles
+evaluate_models <- function(data, target_vars, input_vars) {
+  set.seed(123)
+  
+  # Initialisation d'un data frame pour stocker les résultats
+  results <- data.frame(Target = character(), RMSE = numeric(), stringsAsFactors = FALSE)
+  
+  # Vérification des variables cibles valides
+  valid_targets <- target_vars[sapply(data[target_vars], function(x) length(unique(na.omit(x))) > 1)]
+  
+  if (length(valid_targets) == 0) {
+    stop("Aucune variable cible valide trouvée.")
+  }
+  
+  for (target in target_vars) {
+    # Partition des données
+    train_indices <- createDataPartition(data[[target]], p = 0.8, list = FALSE)
+    train_data <- data[train_indices, ]
+    test_data <- data[-train_indices, ]
+    
+    # Construction du modèle linéaire
+    formula <- as.formula(paste(target, "~", paste(input_vars, collapse = " + ")))
+    lm_model <- lm(formula, data = train_data)
+    
+    # Prédiction sur les données de test
+    lm_predictions <- predict(lm_model, test_data)
+    
+    # Calcul du RMSE
+    lm_rmse <- sqrt(mean((lm_predictions - test_data[[target]])^2))
+    
+    # Calcul du MAE
+    lm_mae <- mean(abs(lm_predictions - test_data[[target]]))
+    
+    # Ajout des résultats
+    results <- rbind(results, data.frame(Target = target, RMSE = lm_rmse, MAE = lm_mae))
+  }
+  
+  return(results)
+}
+
+# Exemple d'utilisation
+inputs <- c('Page.total.likes', 'Type', 'Category', 'Post.Month', 'Post.Weekday', 'Post.Hour', 'Paid')
+targets <- c('Lifetime.Post.Total.Reach', 'Lifetime.Post.Total.Impressions', 'Lifetime.Engaged.Users', 
+             'Lifetime.Post.Consumers', 'Lifetime.Post.Consumptions', 
+             'Lifetime.Post.Impressions.by.people.who.have.liked.your.Page', 
+             'Lifetime.Post.reach.by.people.who.like.your.Page', 
+             'Lifetime.People.who.have.liked.your.Page.and.engaged.with.your.post', 
+             'comment', 'like', 'share', 'Total.Interactions')
+
+# Appel de la fonction
+results <- evaluate_models(modif_dataset, targets, inputs)
+
+# Affichage des résultats
+print(results)
+```
+
+Nous remarquons que nous obtenons de meilleur valeurs de *RMSE* et *MAE* pour les variables *like*, *comment* et *share* et donc on aurait tendance vouloir les choisir comme variable cible, mais il ne faudrait pas oublié notre objectif pour cette étude. Comme on l'a dit précedemment, le but est mesurer la performance d'un post, son impact sur une marque. Et d'après l'article qui à été mis à notre disposition, les interactions avec les posts ont beaucoup plus d'impacts que tout autres métrics. C'est dans cette optique que on as décidé de prendre *Lifetime Engaged Users* comme variable cible car elle s'aligne mieux dans les objectifs de notre étude. Et même sur la matrice de corrélation, on constate qu'elle à l'air plus corrélé avec les 7 inputs comparé aux autres. Nous feront beaucoup plus de tests dans la suite. 
+
+# Création et évaluation des modèles
+
+## Méthodes dites gloutons
+
+Pour comparer différentes méthodes de sélection de variables dans le cadre d’une régression linéaire, nous avons implémenté trois approches courantes : Backward Elimination, Forward Selection, et une méthode combinée appelée Stepwise Selection. Ces techniques permettent de sélectionner les variables explicatives les plus pertinentes pour modéliser la variable cible (Lifetime Engaged Users), tout en optimisant la qualité et la simplicité du modèle.
+
+La méthode Backward Elimination part d’un modèle incluant toutes les variables disponibles et les retire progressivement, tandis que la Forward Selection commence par un modèle vide et ajoute les variables une à une. Enfin, la Stepwise Selection combine ces deux approches pour évaluer à chaque étape si une variable doit être ajoutée ou retirée.
+
+Nous avons évalué ces trois méthodes sur un ensemble d’entraînement et mesuré leur performance sur un ensemble de test à l’aide de l’indicateur RMSE (Root Mean Squared Error), qui évalue la précision des prédictions du modèle.
+
+```{r}
+library(MASS)   # Pour stepAIC
+library(caret)  # Pour les métriques d'évaluation
+
+set.seed(123)  # Pour la reproductibilité
+trainIndex <- createDataPartition(modif_dataset$Lifetime.Engaged.Users, p = 0.8, list = FALSE)
+trainData <- modif_dataset[trainIndex, ]
+testData <- modif_dataset[-trainIndex, ]
+
+#--------------------------------------------------------------------------
+
+# Modèle complet avec toutes les variables
+full_model <- glm(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, data = trainData)
+# Backward Elimination
+start_time1 <- proc.time()
+backward_model <- stepAIC(full_model, direction = "backward", trace = TRUE)
+end_time1 <- proc.time()
+execution_time1 <- end_time1 - start_time1
+
+#-------------------------------------------------------------------------
+
+# Modèle de base (uniquement l'intercept)
+base_model <- glm(Lifetime.Engaged.Users ~ 1, data = trainData)
+# Forward Selection
+start_time2 <- proc.time()
+forward_model <- stepAIC(base_model, scope = list(lower = base_model, upper = glm(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, data = trainData)),direction = "forward", trace = FALSE)
+
+end_time2 <- proc.time()
+execution_time2 <- end_time2 - start_time2
+
+#-------------------------------------------------------------------------
+
+# Stepwise (combinaison de forward et backward)
+# Modèle de base pour la sélection stepwise
+base_model_stepwise <- glm(Lifetime.Engaged.Users ~ 1, data = trainData)
+start_time3 <- proc.time()
+stepwise_model <- stepAIC(base_model_stepwise,scope = list(lower = base_model_stepwise,
+upper = glm(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, data = trainData)), direction = "both", trace = FALSE)
+end_time3 <- proc.time()
+execution_time3 <- end_time3 - start_time3
+
+#-------------------------------------------------------------------------
+
+
+# Fonction pour calculer le RMSE
+calculate_rmse <- function(model, testData) {
+  predictions <- predict(model, newdata = testData)
+  actual <- testData$Lifetime.Engaged.Users
+  sqrt(mean((predictions - actual)^2))  # RMSE
+}
+
+rmse_backward <- calculate_rmse(backward_model, testData)  # 35.77 same formula like stepwise 
+rmse_forward <- calculate_rmse(forward_model, testData)   # 35.77
+rmse_stepwise <- calculate_rmse(stepwise_model, testData) # 35.77
+```
+
+## Les modèles intermédiaires
+
+La régression *Ridge* (L2) et la régression *Lasso* (L1) sont des méthodes de régression pénalisée qui visent à résoudre ces problèmes d’une manière différente. En quelque sorte, elles construisent un modèle en optimisant tous les coefficients simultanément avec la contrainte de la pénalité k (ou λ selon les préférences).
+
+```{r}
+library(glmnet)
+
+set.seed(123)
+train_indices <- createDataPartition(modif_dataset$Lifetime.Engaged.Users, p = 0.8, list = FALSE)
+train_data <- modif_dataset[train_indices, ]
+test_data <- modif_dataset[-train_indices, ]
+
+# Prepare data for penalized regression
+x_train <- model.matrix(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, train_data)[, -1]
+y_train <- train_data$Lifetime.Engaged.Users
+x_test <- model.matrix(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, test_data)[, -1]
+y_test <- test_data$Lifetime.Engaged.Users
+
+# Ridge Regression
+ridge_model <- glmnet(x_train, y_train, alpha = 0)
+plot(ridge_model, xvar = "lambda", label= TRUE)
+
+# Lasso Regression
+lasso_model <- glmnet(x_train, y_train, alpha = 1)
+plot(lasso_model, xvar = "lambda", label= TRUE)
+```
+
+
+```{r}
+library(glmnet)
+
+# Ridge Regression
+ridge_model <- cv.glmnet(x_train, y_train, alpha = 0)
+ridge_lambda <- ridge_model$lambda.min
+ridge_predictions <- predict(ridge_model, s = ridge_lambda, newx = x_test)
+ridge_rmse <- sqrt(mean((ridge_predictions - y_test)^2))
+
+# Lasso Regression
+lasso_model <- cv.glmnet(x_train, y_train, alpha = 1)
+lasso_lambda <- lasso_model$lambda.min
+lasso_predictions <- predict(lasso_model, s = lasso_lambda, newx = x_test)
+lasso_rmse <- sqrt(mean((lasso_predictions - y_test)^2))
+
+cat("Ridge RMSE:", ridge_rmse, "\nLasso RMSE:", lasso_rmse)
+```
+En fonction de ces résultats, le modèle *Ridge* semble offrir une meilleure précision dans la prédiction de *Lifetime.Engaged.Users* que le modèle *Lasso* pour ce jeu de données particulier. Cependant, l'écart est minime, ce qui signifie que, dans ce cas, la différence de performance entre les deux modèles n'est pas substantielle.
+
+
+## Modèle avancé Elastic net
+
+La régression *Elastic Net* est une méthode de régularisation qui combine les avantages de la régression *Ridge* et de la régression *Lasso.* Contrairement à la régression Ridge qui applique une pénalisation L2 sur les coefficients des variables explicatives, et la régression Lasso qui utilise une pénalisation L1, la régression Elastic Net introduit un compromis entre ces deux approches grâce à un paramètre *alpha.* Ce paramètre contrôle l'importance relative de chaque forme de pénalisation, permettant à Elastic Net de bénéficier à la fois de la capacité de Ridge à traiter des corrélations entre variables et de la capacité de Lasso à effectuer une sélection de variables.
+
+Dans cette section, nous allons explorer l'impact de différents paramètres d'alpha (allant de 0.1 à 0.9) sur la performance du modèle Elastic Net, en calculant l'*erreur quadratique moyenne* (RMSE) pour chaque valeur d'alpha. Nous utiliserons les modèles Ridge et Lasso comme points de référence pour évaluer l'impact de ce paramètre sur la précision des prédictions. Cette analyse nous permettra de mieux comprendre le comportement du modèle Elastic Net et d'identifier la valeur d'alpha optimale pour nos données.
+
+
+```{r}
+elastic_model <- glmnet(x_train, y_train, alpha = 0.5)
+plot(elastic_model,xvar = "lambda", label = TRUE)
+```
+
+
+```{r}
+# Définir les différentes valeurs d'alpha pour Elastic Net
+param_et_net <- seq(0.1, 0.9, by = 0.1)
+n <- length(param_et_net)
+
+# Créer des vecteurs pour stocker les RMSE pour chaque valeur d'alpha pour Ridge et Lasso
+rmse_ridge_et_net <- setNames(numeric(n), paste0("Ridge_RMSE_", param_et_net))
+rmse_lasso_et_net <- setNames(numeric(n), paste0("Lasso_RMSE_", param_et_net))
+
+# Calcul des RMSE pour différentes valeurs d'alpha
+for (i in param_et_net) {
+  # Modèle Ridge (avec Elastic Net)
+  modele_ridge <- cv.glmnet(x_train, y_train, alpha = i)
+  lambda_ridge <- modele_ridge$lambda.min
+  predictions_ridge <- predict(modele_ridge, s = lambda_ridge, newx = x_test)
+  rmse_ridge_et_net[paste0("Ridge_RMSE_", i)] <- sqrt(mean((predictions_ridge - y_test)^2))
+  
+  # Modèle Lasso (avec Elastic Net)
+  modele_lasso <- cv.glmnet(x_train, y_train, alpha = i)
+  lambda_lasso <- modele_lasso$lambda.min
+  predictions_lasso <- predict(modele_lasso, s = lambda_lasso, newx = x_test)
+  rmse_lasso_et_net[paste0("Lasso_RMSE_", i)] <- sqrt(mean((predictions_lasso - y_test)^2))
+}
+
+# Afficher les RMSE pour chaque valeur d'alpha pour Ridge et Lasso
+print(rmse_lasso_et_net)
+print(rmse_ridge_et_net)
+
+```
+*Interpretation des résultats*
+
+*1) Modèle Lasso*
+- *Lasso_RMSE_0.1* à *Lasso_RMSE_0.9* montrent les RMSE pour différentes valeurs de *alpha* entre 0.1 et 0.9, où *alpha = 1* correspond à une pénalisation purement Lasso (L1), et les valeurs inférieures à 1 mélangent Lasso avec Ridge.
+
+- Les RMSE pour *Lasso* varient entre 649.29 et 672.43, indiquant que la performance change légèrement en fonction de l'alpha.
+
+- *Lasso_RMSE_0.2* (649.29) semble être la meilleure performance pour Lasso, car cette valeur est relativement plus basse comparée aux autres valeurs d'alpha.
+
+*2) Modèle Ridge*
+- *Ridge_RMSE_0.1* à *Ridge_RMSE_0.9* présentent les RMSE pour différentes valeurs de *alpha* entre 0.1 et 0.9, où *alpha = 0* correspond à une pénalisation purement Ridge (L2), et les valeurs plus proches de 1 correspondent à une combinaison de Ridge et Lasso.
+
+- Les RMSE pour *Ridge* varient entre 653.40 et 672.58. On remarque que la meilleure performance pour Ridge semble être *Ridge_RMSE_0.1* (653.40), indiquant que l'alpha proche de 1, qui correspond à une régularisation plus forte de Ridge, donne les meilleurs résultats dans ce cas particulier.
+
+En somme, nous pouvons conclure que la régularisation *Lasso* (avec *alpha = 0.2*) offre la meilleure performance pour prédire la variable cible avec l'erreur la plus faible.
+
+## La méthode Random Forest
+
+Nous allons passer maintenant à l'utilisation de modèles avancés d'apprentissage automatique, tels que le *Random Forest*, afin de capturer les relations *non linéaires* entre les variables et d'améliorer la précision des prédictions. Ce type de modèle est particulièrement adapté pour traiter des ensembles de données complexes et pour prendre en compte les interactions potentielles entre les différentes caractéristiques explicatives.
+
+```{r}
+library(randomForest)
+
+# Random Forest
+rf_model <- randomForest(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, data = train_data, ntree = 500)
+rf_predictions <- predict(rf_model, test_data)
+rf_rmse <- sqrt(mean((rf_predictions - test_data$Lifetime.Engaged.Users)^2))
+
+cat("Random Forest RMSE:", rf_rmse)
+```
+
+Pour mieux comprendre les contributions spécifiques de chaque variable dans les prédictions du modèle Random Forest, nous analysons leur importance relative. Cette étape permet d'identifier quelles caractéristiques jouent un rôle clé dans la prédiction de *Lifetime Engaged Users*.
+
+Les variables les plus significatives sont mises en évidence à l'aide d'une visualisation graphique, sous forme de graphique circulaire. Les pourcentages associés à chaque variable indiquent leur part relative d'importance dans le modèle, facilitant ainsi l'interprétation et l'optimisation des prédictions.
+
+```{r}
+library(randomForest)
+library(caret)
+
+
+# Construction du modèle Random Forest
+set.seed(123)
+rf_model <- randomForest(Lifetime.Engaged.Users ~ Page.total.likes + Type + Category + Post.Month + Post.Weekday + Post.Hour + Paid, data = trainData, 
+                         importance = TRUE, ntree = 500)
+
+# Affichage du modèle
+print(rf_model)
+
+# Importance des variables
+var_importance <- importance(rf_model)
+
+# Conversion en pourcentages
+importance_percent <- var_importance[, "%IncMSE"] / sum(var_importance[, "%IncMSE"]) * 100
+
+# Création d'un tableau récapitulatif
+importance_table <- data.frame(Variable = rownames(var_importance),
+                               Importance = importance_percent)
+
+# Tri des variables par importance
+importance_table <- importance_table[order(-importance_table$Importance), ]
+print(importance_table)
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Création des données à partir des résultats obtenus
+importance_data <- data.frame(
+  Variable = c("Type", "Page.total.likes", "Post.Month", 
+               "Paid", "Category", "Post.Hour", "Post.Weekday"),
+  Importance = c(62.094019, 19.091705, 17.682785, 
+                 4.993742, 3.159735, -1.880104, -5.141881)
+)
+
+# Filtrer uniquement les variables avec importance positive
+importance_filtered <- importance_data %>%
+  filter(Importance > 0)
+
+# Ajouter une colonne pourcentage
+importance_filtered <- importance_filtered %>%
+  mutate(Percentage = Importance / sum(Importance) * 100)
+
+# Liste des couleurs sombres alternées
+dark_colors <- c("#2c3e50", "#34495e", "#7f8c8d", "#95a5a6", "#1abc9c", "#16a085")
+
+print(importance_filtered)
+
+# Création du graphique circulaire avec ggplot2
+ggplot(importance_filtered, aes(x = "", y = Percentage, fill = Variable)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start = 0) +
+  labs(title = "Relevance of Input Features for 'Lifetime Engaged Users'",
+       caption = "Relative importance of each variable in the Random Forest model") +
+  theme_void() +  # Enlève les axes et le fond
+  theme(legend.title = element_blank()) +  # Supprime le titre de la légende
+  geom_text(aes(label = paste0(Variable, "\n", round(Percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5), color = "white") +  # Noms et pourcentages dans les segments
+  scale_fill_manual(values = dark_colors)  # Alterner les couleurs sombres
+```
+*Interpretation des résultats*
+
+- *Type (58.02%)* : Variable la plus influente, montrant que le type de contenu impacte fortement l'engagement.
+- *Page.total.likes (17.84%)* : Le nombre de likes de la page a un impact significatif.
+- *Post.Month (16.52%)* : L'engagement varie en fonction des mois, reflétant des tendances saisonnières.
+- *Paid (4.67%)* : Les publications sponsorisées ont une influence modérée.
+- *Category (2.95%)* : Impact mineur, mais non négligeable.
+
+Dans la suite, nous essayerons de mieux comprendre les interactions entre différents types de publications, l'engagement des utilisateurs au fil du temps et l'influence de facteurs clés tels que les mois de publication ou les caractéristiques des pages, plusieurs analyses graphiques ont été réalisées. Ces visualisations permettent d’identifier les tendances majeures et de guider les stratégies de contenu de manière plus éclairée.
+
+```{r}
+
+# Create a mapping of numeric Type values to their corresponding names
+type_labels <- c("Link", "Photo", "Status", "Video")
+
+# Convert the Type column to a factor with meaningful labels
+modif_dataset$Type <- factor(modif_dataset$Type, levels = 1:4, labels = type_labels)
+
+
+# Regrouper les données par "Type" et calculer la somme des "Lifetime Engaged Users"
+summarized_data <- modif_dataset %>%
+  group_by(Type) %>%
+  summarize(total_engaged_users = sum(Lifetime.Engaged.Users, na.rm = TRUE))
+
+# Créer un graphique en barres avec les vrais noms sur l'axe des abscisses
+ggplot(summarized_data, aes(x = Type, y = total_engaged_users, fill = Type)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  scale_fill_manual(values = c("Link" = "black", "Photo" = "black", "Status" = "black", "Video" = "black")) +  # Palette personnalisée
+  labs(title = "Total Lifetime Engaged Users par Type",
+       x = "Type de Publication",
+       y = "Lifetime Engaged Users") +
+  geom_text(aes(label = total_engaged_users), vjust = -0.3, color = "black") +  # Ajouter les valeurs au-dessus des barres
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+*Interpretation des résultats*
+
+Le graphique montre la somme totale des utilisateurs engagés ("Lifetime Engaged Users") en fonction des différents types de publication (*Link*, *Photo*, *Status*, *Video*). Voici les principaux points à retenir :
+
+*Photos :*
+
+Les publications de type Photo génèrent le plus d'engagement, avec *347 480* utilisateurs engagés.
+Cela montre que les contenus visuels, comme les photos, attirent davantage d'interaction et d'engagement de la part des utilisateurs.
+
+*Status :*
+
+Les publications de type Status arrivent en deuxième position, avec *91 810* utilisateurs engagés.
+Bien que loin derrière les photos, elles maintiennent un niveau d'engagement significatif.
+
+*Vidéos et Liens :*
+
+Les publications de type Vidéo et Link enregistrent des niveaux d'engagement beaucoup plus faibles, avec respectivement *11 949* et *7 542* utilisateurs engagés.
+Cela suggère que ces formats ne captivent pas autant l'audience dans ce contexte spécifique.
+
+Les publications contenant des *photos* sont de loin les plus performantes pour générer de l'engagement sur la plateforme. En comparaison, les *liens* et *vidéos* semblent moins efficaces, ce qui pourrait orienter les choix stratégiques vers un contenu plus visuel pour maximiser l'interaction des utilisateurs.
+
+
+```{r}
+# Créer un graphique avec une courbe lissée
+ggplot(modif_dataset, aes(x = modif_dataset$Page.total.likes, y = modif_dataset$Lifetime.Engaged.Users)) +
+  geom_point(color = "blue", size = 3) +  # Ajout des points avec couleur bleue
+  labs(title = "Relation entre Page Total Likes et Lifetime Engaged Users",
+       x = "Page Total Likes",
+       y = "Lifetime Engaged Users") +
+  theme_minimal(base_size = 15) +  # Utilisation d'un thème minimaliste pour une meilleure lisibilité
+  theme(
+    axis.title.x = element_text(size = 14, face = "bold"),  # Style de l'axe X
+    axis.title.y = element_text(size = 14, face = "bold"),  # Style de l'axe Y
+    axis.text = element_text(size = 12)  # Taille du texte des axes
+  )
+```
+*Interpretation des résultats*
+
+Ce graphique illustre la relation entre le nombre total de likes d'une page (*Page Total Likes)* et le nombre d'utilisateurs engagés (*Lifetime Engaged Users*). Voici les observations principales :
+
+*Tendance générale :*
+
+Il existe une relation positive faible entre les deux variables :
+Lorsque le nombre de likes d'une page augmente, le nombre d'utilisateurs engagés tend également à augmenter, mais *cette relation reste dispersée*.
+Cela signifie qu'avoir plus de likes ne garantit pas nécessairement un engagement élevé.
+
+*Dispersion des points :*
+
+La majorité des points sont concentrés dans les valeurs basses de l'axe Lifetime Engaged Users (*moins de 3000 utilisateurs engagés*), même pour des pages avec un nombre élevé de likes (au-dessus de *100 000*).
+Cela indique que l'engagement reste faible pour beaucoup de pages malgré leur popularité.
+
+*Points exceptionnels :*
+
+Quelques points anormaux ou exceptions montrent des pages avec un nombre d'utilisateurs engagés beaucoup plus élevé (par exemple, autour de *12 000 utilisateurs engagés*) même avec un nombre moyen de likes (*~90 000*).
+Cela peut indiquer des *publications* ou *campagnes* particulièrement performantes.
+
+*Conclusion :*
+Il n'y a pas une corrélation forte entre le nombre total de likes d'une page et le nombre d'utilisateurs engagés. Cela souligne que l'engagement dépend de facteurs qualitatifs comme le type et la pertinence des contenus plutôt que du nombre total de likes. Les pages avec un grand nombre de likes devraient donc optimiser leur contenu pour maximiser l'engagement.
+
+
+```{r}
+
+# Création d'un vecteur de noms de mois
+mois_labels <- c("Janvier", "Février", "Mars", "Avril", "Mai", "Juin", 
+                 "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre")
+
+
+# Création d'un graphique en barres montrant la somme des Lifetime Engaged Users par mois
+ggplot(modif_dataset, aes(x = factor(modif_dataset$Post.Month, levels = 1:12, labels = mois_labels), y = modif_dataset$Lifetime.Engaged.Users)) +
+  stat_summary(fun = "sum", geom = "bar", fill = "steelblue") +  # Calcul de la somme par mois et affichage sous forme de barres
+  geom_text(stat = 'summary', fun = 'sum', aes(label = after_stat(y)), vjust = -0.5, size = 5) +
+  labs(title = "Evolution des Lifetime Engaged Users par mois",
+       x = "Mois de l'année",
+       y = "Lifetime Engaged Users") +
+  theme_minimal(base_size = 15) +  # Thème minimaliste
+  theme(
+    axis.title.x = element_text(size = 14, face = "bold"),  # Style de l'axe X
+    axis.title.y = element_text(size = 14, face = "bold"),  # Style de l'axe Y
+    axis.text = element_text(size = 12)  # Taille du texte des axes
+  )
+
+```
+
+*Interpretation des résultats*
+
+Ce graphique montre l'évolution du nombre total d'utilisateurs engagés ("*Lifetime Engaged Users*") pour chaque *mois* de l'année. Les valeurs varient considérablement d'un mois à l'autre.
+
+*Mois avec le plus d'engagement* :
+
+*Juillet* atteint un pic impressionnant avec *59 676* utilisateurs engagés, ce qui en fait le mois avec le plus grand engagement de l'année.
+*Octobre* suit avec *48 957* utilisateurs engagés, indiquant une autre période d'engagement élevé.
+
+*Mois avec le moins d'engagement* :
+
+*Novembre* a le plus faible engagement avec *24 014* utilisateurs, ce qui contraste fortement avec les mois de pointe.
+*Janvier* et *Août* enregistrent aussi des valeurs relativement basses avec respectivement *25 287* et *27 769* utilisateurs engagés.
+
+*Tendances saisonnières :*
+
+*Hausse d'engagement* : On observe une tendance à l'augmentation de l'engagement autour de l'été (*Juin* et *Juillet*) et à nouveau en *Octobre* et *Décembre.* Cela pourrait être lié à des périodes de vacances, des campagnes marketing ou des contenus saisonniers.
+*Baisse d'engagement* : *Mai*, *Août* et *Novembre* sont marqués par des valeurs plus faibles. Cela peut indiquer un creux d'activité ou une baisse de la participation des utilisateurs.
+
+
+Pour conclure, il y a des variations significatives d'engagement au fil des mois et donc pour cela il faut améliorer l'engagement global, il serait utile d'analyser les raisons des pics en *Juillet* et en *Octobre* pour répliquer les stratégies ou contenus à succès.
+Une attention particulière pourrait être portée sur les mois faibles comme *Novembre* pour identifier des opportunités d'amélioration.
+
+# La Comparaison des modèles
+
+Nous allons maintenant comparer les *RMSE* des différents modèles que nous avons créés précédemment. Cette comparaison nous permettra d'évaluer la performance de chaque modèle en termes d'exactitude des prédictions. En analysant les valeurs de RMSE obtenues, nous pourrons déterminer quel modèle offre les meilleures prévisions tout en minimisant les erreurs de prédiction. Cette étape est essentielle pour identifier le modèle le plus adapté à notre jeu de données.
+
+```{r}
+min_lasso_rmse <- min(rmse_lasso_et_net)
+min_ridge_rmse <- min(rmse_ridge_et_net)
+
+# Comparer les RMSE minimaux entre Lasso et Ridge
+if (min_lasso_rmse > min_ridge_rmse) {
+  elastic_rmse <- min_ridge_rmse
+} else if (min_lasso_rmse < min_ridge_rmse) {
+  elastic_rmse <- min_lasso_rmse
+} else {
+  elastic_rmse <- min_lasso_rmse
+}
+lm_rmse <- 919.68
+
+# Compilation des valeurs RMSE
+performance_modeles <- data.frame(
+  Modele = c("Régression Linéaire", "Forward Selection", "Backward Elimination", "Stepwise", "Régression Ridge", "Régression Lasso", "Elastic Net", "Random Forest"),
+  RMSE = c(lm_rmse, rmse_forward, rmse_backward, rmse_stepwise, ridge_rmse, lasso_rmse, elastic_rmse, rf_rmse)
+)
+
+ggplot(performance_modeles, aes(x = Modele, y = RMSE, fill = Modele)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Comparaison des Performances des Modèles", y = "RMSE", x = "Modèle") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(aes(label = round(RMSE, 2)), vjust = -0.3, color = "black", size = 5)  # Ajouter les valeurs au-dessus des barres
+```
+*Interprétation des résultats*
+
+Le graphique représente les valeurs RMSE obtenues pour différents modèles de régression, ce qui permet de comparer leur performance en prédiction. Voici l'interprétation des principaux résultats :
+
+*Elastic Net* a la plus petite valeur de RMSE avec *649.29*, ce qui en fait *le modèle le plus performant* parmi ceux testés.
+*Régression Ridge* suit de près avec un RMSE de *650.41*, montrant également une performance solide.
+Les approches *Backward Elimination* et *Stepwise* ont des performances équivalentes (RMSE : *659.65*), ce qui les place légèrement derrière Elastic Net et Ridge.
+*Régression Lasso* présente un RMSE légèrement supérieur à Elastic Net (RMSE : 658.1), mais reste compétitif.
+Le modèle *Random Forest* présente un RMSE plus élevé à *673.83*, ce qui indique une moins bonne performance dans ce cas précis.
+Enfin, *Régression Linéaire* affiche le pire RMSE avec *976.81*, ce qui démontre des performances insuffisantes comparées aux autres méthodes.
+
+*Conclusion générale :*
+
+Parmi tous les modèles comparés *Elastic Net* est le modèle qui donne les *meilleures performances* en termes de *RMSE*. Il combine les avantages de *Lasso* et *Ridge* pour offrir une solution optimale.
+Les modèles *Ridge* et *Lasso* confirment également leur efficacité avec des RMSE très proches.
+Les approches de sélection de variables (Backward Elimination, Stepwise, et Forward Selection) restent pertinentes, mais légèrement moins performantes.
+La Régression Linéaire brute se révèle inefficace par rapport aux méthodes plus sophistiquées.
+Ainsi, pour des performances optimales sur ce jeu de données, Elastic Net est recommandé comme le modèle de prédiction le plus fiable.
+
