@@ -46,14 +46,3 @@ This project aims to predict key performance metrics (e.g., reach, engagement) f
 2. Install dependencies:
    ```R
    install.packages(c("caret", "glmnet", "randomForest", "corrplot"))
-
-This README:
-- Uses clear section headers
-- Highlights actionable insights
-- Shows model performance at a glance
-- Provides reproduction instructions
-- Maintains technical accuracy while being accessible
-- Includes visual badges for quick scanning
-- Focuses on business impact in conclusion
-
-You can customize the final badge link and add installation details if needed.
