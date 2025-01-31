@@ -34,10 +34,10 @@ This project aims to predict key performance metrics (e.g., reach, engagement) f
 ## Model Performance
 | Model                | RMSE   |
 |----------------------|--------|
-| Elastic Net          | 649.29 |
-| Ridge Regression     | 650.41 |
-| Lasso Regression     | 658.10 |
-| Random Forest        | 673.83 |
+| Elastic Net          | 650.74 |
+| Ridge Regression     | 651.14 |
+| Lasso Regression     | 652.73 |
+| Random Forest        | 672.5 |
 | Linear Regression    | 919.68 |
 
 **Best Performer**: Elastic Net (Combined L1/L2 regularization)
@@ -45,12 +45,7 @@ This project aims to predict key performance metrics (e.g., reach, engagement) f
 ![Comparaison Models](img/all_model.png)
 
 ## How to Reproduce
-1. Clone repository : git clone https://github.com/yourusername/social-media-prediction.git ( The dataset is not there, but it's the same processus for similar project )
-2. Install dependencies:
-   ```R
-   install.packages(c("caret", "glmnet", "randomForest", "corrplot"))
-3. Run the main.R script to preprocess the data and train the models
-4. Visualize the results in the generated graphs.
+This specific cosmetics brand dataset isn't publicly available due to confidentiality agreements.
 
 ## Contributors
 
