@@ -41,10 +41,19 @@ This project aims to predict key performance metrics (e.g., reach, engagement) f
 | Linear Regression    | 919.68 |
 
 **Best Performer**: Elastic Net (Combined L1/L2 regularization)
+
 ![Comparaison Models](img/all_model.png)
 
 ## How to Reproduce
-1. Clone repository : git clone https://github.com/yourusername/social-media-prediction.git 
+1. Clone repository : git clone https://github.com/yourusername/social-media-prediction.git ( The dataset is not there, but it's the same processus for similar project )
 2. Install dependencies:
    ```R
    install.packages(c("caret", "glmnet", "randomForest", "corrplot"))
+3. Run the main.R script to preprocess the data and train the models
+4. Visualize the results in the generated graphs.
+
+## Contributors
+
+- Ahmed TRAORE
+- Winner KAH
+
