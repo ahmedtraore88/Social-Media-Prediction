@@ -41,6 +41,7 @@ This project aims to predict key performance metrics (e.g., reach, engagement) f
 | Linear Regression    | 919.68 |
 
 **Best Performer**: Elastic Net (Combined L1/L2 regularization)
+![Comparaison Models](img/all_model.png)
 
 ## How to Reproduce
 1. Clone repository : git clone https://github.com/yourusername/social-media-prediction.git 
