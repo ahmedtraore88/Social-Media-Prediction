@@ -8,6 +8,7 @@ This project aims to predict key performance metrics (e.g., reach, engagement) f
 - **Target Metrics**: Engagement, reach, impressions, and derived interactions
 - **Methods**: Linear regression, penalized regressions (Ridge/Lasso/Elastic Net), and Random Forest
   
+![Correlation Matrix](img/CorMatrix.png)
 
 ## Data Preprocessing
 - Removed rows with missing values
